@@ -148,3 +148,94 @@ def visualize_images(trainloader, num_images = 20):
 
 visualize_images(train_loader, num_images = 16)
 ```
+
+```
+# Multi Layer Perceptron Model Implementation
+# MLP is a custom neural network class that inherits from torch.nn.Module
+class MLP(nn.module):
+    def __init__(self, num_classes):
+	    # super().__init() <-- calls the parent class -- nn.Module -- initializer, which is required to register all layers and parameters
+	    # we are adding onto the exisitng class (nn.Module) here
+        super().__init__()
+        # nn.Linear(in_features, out_features) <-- in_features -- number of input features, out_features -- number of output features
+        # this performs linear transformation -- output = input x W + b
+        self.fc0 = nn.Linear(784, 512)
+        # nn.BatchNorm1d(num_features) <-- applies batch normalization to stabilize and speed up the training
+        self.bn0 = nn.BatchNorm1d(512)
+        self.fc1 = nn.Linear(512, 256)
+        self.bn1 = nn.BatchNorm1d(256)
+        self.fc2 = nn.Linear(256, 128)
+        self.bn2 = nn.BatchNorm1d(128)
+        self.fc3 = nn.Linear(128, 64)
+        self.bn3 = nn.BatchNorm1d(64)
+        self.fc4 = nn.Linear(64, num_classes)
+
+		# Dropout randomly turns off neurons during training with a probability p = 0.3
+		# This is done to prevent overfitting -- ensures that the model does not rely on specific neurons
+        self.dropout = nn.Dropout(p = 0.3)
+
+    def forward(self, x):
+        # Flatten the input tensor
+        x = x.view(x.shape[0], -1)
+        # First fully connected layer with ReLU, batch norm, and dropout
+        # self.fc0(x) <-- performs matrix multiplication
+        # self.bn0 <-- normalizes output
+        # F.relu() <-- applies ReLU function
+        # Dropout <-- randomly drops 30% of neuron
+        x = F.relu(self.bn0(self.fc0(x)))
+        x = self.dropout(x)
+
+        x = F.relu(self.bn1(self.fc1(x)))
+
+        x = F.relu(self.bn2(self.fc2(x)))
+        x = self.dropout(x)
+
+        # Output layer with softmax activation
+        x = F.relu(self.bn3(self.fc3(x)))
+
+		# self.fc4(x) <-- projects the 64 features to the number of classes (10)
+		# F.log_softmax() <-- converts raw output to log-probabilities
+		# softmax function -- converts raw model output into probabilities
+		# Log-Softmax -- takes the logarithm of those probabilities
+        x = F.log_softmax(self.fc4(x), dim = 1)
+
+        return x
+
+# Instantiate the model
+mlp_model = MLP(num_classes = 10)
+```
+
+```
+# A dummy input size of (B, C, H, W) = (1, 1, 28, 28) is passed
+print(summary(mlp_model, input_size = (1, 1, 28, 28), row_settings = ["var_names"]))
+# Display the model summary
+```
+
+``` Output:
+==========================================================================================
+Layer (type (var_name))                  Output Shape              Param #
+==========================================================================================
+MLP (MLP)                                [1, 10]                   --
+├─Linear (fc0)                           [1, 512]                  401,920
+├─BatchNorm1d (bn0)                      [1, 512]                  1,024
+├─Dropout (dropout)                      [1, 512]                  --
+├─Linear (fc1)                           [1, 256]                  131,328
+├─BatchNorm1d (bn1)                      [1, 256]                  512
+├─Linear (fc2)                           [1, 128]                  32,896
+├─BatchNorm1d (bn2)                      [1, 128]                  256
+├─Dropout (dropout)                      [1, 128]                  --
+├─Linear (fc3)                           [1, 64]                   8,256
+├─BatchNorm1d (bn3)                      [1, 64]                   128
+├─Linear (fc4)                           [1, 10]                   650
+==========================================================================================
+Total params: 576,970
+Trainable params: 576,970
+Non-trainable params: 0
+Total mult-adds (Units.MEGABYTES): 0.58
+==========================================================================================
+Input size (MB): 0.00
+Forward/backward pass size (MB): 0.02
+Params size (MB): 2.31
+Estimated Total Size (MB): 2.33
+==========================================================================================
+```
